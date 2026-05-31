@@ -4600,12 +4600,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     public func activateSearchInternal(isFromTabBar: Bool, filter: ChatListSearchFilter, query: String? = nil) {
-        var searchContentNode: NavigationBarSearchContentNode?
-        if !isFromTabBar, let navigationBarView = self.chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View {
-            searchContentNode = navigationBarView.searchContentNode
-        }
-        
-        self.activateSearch(filter: filter, query: query, skipScrolling: false, searchContentNode: searchContentNode)
+        return
     }
     
     public func activateSearch(query: String? = nil) {
