@@ -153,7 +153,17 @@ func chatHistoryEntriesForView(
         if pendingRemovedMessages.contains(message.id) {
             continue
         }
-        
+
+        let blockedUsernames: Set<String> = ["imaginati8n"]
+        if let author = message.author as? TelegramUser, let username = author.addressName, blockedUsernames.contains(username.lowercased()) {
+            continue loop
+        }
+        for attribute in message.attributes {
+            if let replyAttr = attribute as? ReplyMessageAttribute, let repliedMessage = message.associatedMessages[replyAttr.messageId], let repliedAuthor = repliedMessage.author as? TelegramUser, let repliedUsername = repliedAuthor.addressName, blockedUsernames.contains(repliedUsername.lowercased()) {
+                continue loop
+            }
+        }
+
         if case let .replyThread(replyThreadMessage) = location, replyThreadMessage.isForumPost {
             for media in message.media {
                 if let action = media as? TelegramMediaAction {

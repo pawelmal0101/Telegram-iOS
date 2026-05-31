@@ -653,7 +653,16 @@ public struct GalleryEntry {
 
 private func galleryEntriesForMessageHistoryEntries(_ entries: [MessageHistoryEntry], mediaSubject: GalleryMediaSubject?) -> [GalleryEntry] {
     var results: [GalleryEntry] = []
-    for entry in entries {
+    let blockedUsernames: Set<String> = ["imaginati8n"]
+    entryLoop: for entry in entries {
+        if let author = entry.message.author, let username = author.addressName, blockedUsernames.contains(username.lowercased()) {
+            continue entryLoop
+        }
+        for attribute in entry.message.attributes {
+            if let replyAttr = attribute as? ReplyMessageAttribute, let repliedMessage = entry.message.associatedMessages[replyAttr.messageId], let repliedAuthor = repliedMessage.author, let repliedUsername = repliedAuthor.addressName, blockedUsernames.contains(repliedUsername.lowercased()) {
+                continue entryLoop
+            }
+        }
         let messageMedia = mediaForMessage(message: entry.message, mediaSubject: mediaSubject)
         if !messageMedia.isEmpty {
             if messageMedia.count > 1 {

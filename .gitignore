@@ -81,3 +81,6 @@ xcode-files
 **/.claude/settings.local.json
 **/.vscode/launch.json
 /buildbox/*
+
+# Personal build configuration (contains api_id + api_hash)
+build-system/my-configuration.json
