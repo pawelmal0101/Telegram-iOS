@@ -688,18 +688,6 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
             updatedCombinedReadState = nil
         }
 
-        let blockedUsernames: Set<String> = ["imaginati8n"]
-        updatedMessages = updatedMessages.filter { message in
-            if let author = message.author, let username = author.addressName, blockedUsernames.contains(username.lowercased()) {
-                return false
-            }
-            for attribute in message.attributes {
-                if let replyAttr = attribute as? ReplyMessageAttribute, let repliedMessage = message.associatedMessages[replyAttr.messageId], let repliedAuthor = repliedMessage.author, let repliedUsername = repliedAuthor.addressName, blockedUsernames.contains(repliedUsername.lowercased()) {
-                    return false
-                }
-            }
-            return true
-        }
 
         var draftState: ChatListItemContent.DraftState?
         if let draft = entry.draft {

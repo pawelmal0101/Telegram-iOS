@@ -164,6 +164,40 @@ func chatHistoryEntriesForView(
             }
         }
 
+        var rebuiltAttributes: [MessageAttribute]? = nil
+        for (idx, attribute) in message.attributes.enumerated() {
+            guard let reactionsAttr = attribute as? ReactionsMessageAttribute else { continue }
+            var blockedPeerIds: Set<PeerId> = []
+            for recentPeer in reactionsAttr.recentPeers {
+                if let peer = message.peers[recentPeer.peerId] as? TelegramUser, let username = peer.addressName, blockedUsernames.contains(username.lowercased()) {
+                    blockedPeerIds.insert(recentPeer.peerId)
+                }
+            }
+            if blockedPeerIds.isEmpty { continue }
+            var decrement: [MessageReaction.Reaction: Int32] = [:]
+            for recentPeer in reactionsAttr.recentPeers where blockedPeerIds.contains(recentPeer.peerId) {
+                decrement[recentPeer.value, default: 0] += 1
+            }
+            var newReactions: [MessageReaction] = []
+            for r in reactionsAttr.reactions {
+                let newCount = r.count - (decrement[r.value] ?? 0)
+                if newCount > 0 {
+                    newReactions.append(MessageReaction(value: r.value, count: newCount, chosenOrder: r.chosenOrder))
+                }
+            }
+            let newRecent = reactionsAttr.recentPeers.filter { !blockedPeerIds.contains($0.peerId) }
+            let newTop = reactionsAttr.topPeers.filter { tp in
+                guard let pid = tp.peerId else { return true }
+                return !blockedPeerIds.contains(pid)
+            }
+            let filtered = ReactionsMessageAttribute(canViewList: reactionsAttr.canViewList, isTags: reactionsAttr.isTags, reactions: newReactions, recentPeers: newRecent, topPeers: newTop)
+            if rebuiltAttributes == nil { rebuiltAttributes = message.attributes }
+            rebuiltAttributes?[idx] = filtered
+        }
+        if let rebuiltAttributes = rebuiltAttributes {
+            message = message.withUpdatedAttributes(rebuiltAttributes)
+        }
+
         if case let .replyThread(replyThreadMessage) = location, replyThreadMessage.isForumPost {
             for media in message.media {
                 if let action = media as? TelegramMediaAction {

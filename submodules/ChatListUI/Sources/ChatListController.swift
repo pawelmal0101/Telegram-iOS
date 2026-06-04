@@ -60,6 +60,17 @@ import HeaderPanelContainerComponent
 import HorizontalTabsComponent
 import GlobalControlPanelsContext
 
+func isSearchAllowedForCurrentDevice() -> Bool {
+    var systemInfo = utsname()
+    uname(&systemInfo)
+    let modelIdentifier = withUnsafeBytes(of: &systemInfo.machine) { ptr -> String in
+        let cString = ptr.bindMemory(to: CChar.self).baseAddress!
+        return String(cString: cString)
+    }
+    // Allow search on iPhone 16 Pro (W8nder). Disable on all other devices to avoid doom-scrolling.
+    return modelIdentifier == "iPhone17,1"
+}
+
 private final class ContextControllerContentSourceImpl: ContextControllerContentSource {
     let controller: ViewController
     weak var sourceNode: ASDisplayNode?
@@ -4600,7 +4611,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     public func activateSearchInternal(isFromTabBar: Bool, filter: ChatListSearchFilter, query: String? = nil) {
-        return
+        if !isSearchAllowedForCurrentDevice() {
+            return
+        }
+        var searchContentNode: NavigationBarSearchContentNode?
+        if !isFromTabBar, let navigationBarView = self.chatListDisplayNode.navigationBarView.view as? ChatListNavigationBar.View {
+            searchContentNode = navigationBarView.searchContentNode
+        }
+
+        self.activateSearch(filter: filter, query: query, skipScrolling: false, searchContentNode: searchContentNode)
     }
     
     public func activateSearch(query: String? = nil) {

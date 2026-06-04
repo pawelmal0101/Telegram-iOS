@@ -1616,6 +1616,63 @@ struct ChatListViewState {
                             renderedMessages.append(contentsOf: messageGroup.compactMap(postbox.renderIntermediateMessage))
                         }
                     }
+
+                    let blockedUsernames: Set<String> = ["imaginati8n"]
+                    func peerHasBlockedUsername(_ peer: Peer) -> Bool {
+                        let addressNames: [String]
+                        switch peer.indexName {
+                        case let .title(_, names):
+                            addressNames = names
+                        case let .personName(_, _, names, _):
+                            addressNames = names
+                        }
+                        for name in addressNames {
+                            if blockedUsernames.contains(name.lowercased()) {
+                                return true
+                            }
+                        }
+                        return false
+                    }
+                    func isMessageBlocked(_ message: Message) -> Bool {
+                        if let author = message.author, peerHasBlockedUsername(author) {
+                            return true
+                        }
+                        for (_, repliedMessage) in message.associatedMessages {
+                            if let repliedAuthor = repliedMessage.author, peerHasBlockedUsername(repliedAuthor) {
+                                return true
+                            }
+                        }
+                        return false
+                    }
+                    let topMessageIsBlocked: Bool = {
+                        guard let topMessage = renderedMessages.last else { return false }
+                        return isMessageBlocked(topMessage)
+                    }()
+                    if topMessageIsBlocked, let messageIndex = messageIndex {
+                        let peerId = messageIndex.id.peerId
+                        let namespace = messageIndex.id.namespace
+                        let olderMessages = postbox.messageHistoryTable.fetch(
+                            peerId: peerId,
+                            namespace: namespace,
+                            tag: nil,
+                            customTag: nil,
+                            threadId: nil,
+                            from: messageIndex,
+                            includeFrom: false,
+                            to: .absoluteLowerBound().withPeerId(peerId).withNamespace(namespace),
+                            ignoreMessagesInTimestampRange: nil,
+                            ignoreMessageIds: Set(),
+                            limit: 30
+                        )
+                        for intermediate in olderMessages {
+                            let candidate = postbox.renderIntermediateMessage(intermediate)
+                            if isMessageBlocked(candidate) {
+                                continue
+                            }
+                            renderedMessages = [candidate]
+                            break
+                        }
+                    }
                     
                     var isThreadBased = false
                     var threadsArePeers = false
